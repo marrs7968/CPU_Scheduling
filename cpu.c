@@ -24,7 +24,7 @@ struct PCB handle_process_arrival_pp(struct PCB ready_queue[QUEUEMAX], int *queu
             return current_process;
         } else {
             current_process.execution_endtime = 0;
-            current_process.remaining_bursttime = current_process.total_bursttime - timestamp;
+            current_process.remaining_bursttime = current_process.total_bursttime - (timestamp - current_process.execution_starttime);
             ready_queue[*queue_cnt] = current_process;
             new_process.execution_starttime = timestamp;
             new_process.execution_endtime = timestamp + new_process.total_bursttime;
@@ -35,7 +35,78 @@ struct PCB handle_process_arrival_pp(struct PCB ready_queue[QUEUEMAX], int *queu
     }
 }
 struct PCB handle_process_completion_pp(struct PCB ready_queue[QUEUEMAX], int *queue_cnt, int timestamp) {
+    if (*queue_cnt == 0) {
+        return (struct PCB){0, 0, 0, 0, 0, 0, 0}; // No process in the ready queue
+    } else {
+        int max_priority = INT_MAX;
+        int max_index = -1;
+        for (int i = 0; i < *queue_cnt; i++) {
+            if (ready_queue[i].process_priority < max_priority) {
+                max_priority = ready_queue[i].process_priority;
+                max_index = i;
+            }
+        }
+        // Remove the process from the ready queue
+        ready_queue[max_index].execution_starttime = timestamp;
+        ready_queue[max_index].execution_endtime = timestamp + ready_queue[max_index].remaining_bursttime;
+        struct PCB next_process = ready_queue[max_index];
+        
+        for (int i = max_index; i < *queue_cnt - 1; i++) {
+            ready_queue[i] = ready_queue[i + 1];
+        }
+        (*queue_cnt)--;
 
+        return next_process;
+    }
+}
+
+// ============================ SHORTEST REMAINING TIME NEXT SCHEDULING ALGORITHM =================================
+struct PCB handle_process_arrival_srtp(struct PCB ready_queue[QUEUEMAX], int *queue_cnt, struct PCB current_process, struct PCB new_process, int time_stamp) {
+    if (current_process.process_id == 0 && current_process.arrival_timestamp == 0 && current_process.total_bursttime == 0 && 
+        current_process.execution_starttime == 0 && current_process.execution_endtime == 0 && current_process.remaining_bursttime == 0 && 
+        current_process.process_priority == 0) {
+        // When there is no current process, new process is set to current timestamp
+        new_process.execution_starttime = time_stamp;
+        new_process.execution_endtime = time_stamp + new_process.total_bursttime;
+        new_process.remaining_bursttime = new_process.total_bursttime;
+
+        return new_process;
+    } else {
+        if (current_process.remaining_bursttime > new_process.total_bursttime) {
+            ready_queue[*queue_cnt] = new_process;
+            new_process.execution_starttime = 0;
+            new_process.execution_endtime = 0;
+            new_process.remaining_bursttime = new_process.total_bursttime;
+            
+            return new_process;
+        }
+    }
+}
+
+struct PCB handle_process_completion_srtp(struct PCB ready_queue[QUEUEMAX], int *queue_cnt, int timestamp) {
+    if (*queue_cnt == 0) {
+        return (struct PCB){0, 0, 0, 0, 0, 0, 0}; // No process in the ready queue
+    } else {
+        int min_burst = INT_MAX;
+        int min_index = -1;
+        for (int i = 0; i < *queue_cnt; i++) {
+            if (ready_queue[i].remaining_bursttime < min_burst) {
+                min_burst = ready_queue[i].remaining_bursttime;
+                min_index = i;
+            }
+        }
+        // Remove the process from the ready queue
+        ready_queue[min_index].execution_starttime = timestamp;
+        ready_queue[min_index].execution_endtime = timestamp + ready_queue[min_index].remaining_bursttime;
+        struct PCB next_process = ready_queue[min_index];
+        
+        for (int i = min_index; i < *queue_cnt - 1; i++) {
+            ready_queue[i] = ready_queue[i + 1];
+        }
+        (*queue_cnt)--;
+
+        return next_process;
+    }
 }
 
 // ============================ ROUND ROBIN SCHEDULING ALGORITHM =================================
