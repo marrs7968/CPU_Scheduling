@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <limits.h>
-#include <oslabs.h>
+#include "oslabs.h"
 
 // ============================ PRIORITY-BASED PREEMPTIVE SCHEDULING ALGORITHM ===================
 struct PCB handle_process_arrival_pp(struct PCB ready_queue[QUEUEMAX], int *queue_cnt, struct PCB current_process, struct PCB new_process, int timestamp) {
@@ -29,6 +29,7 @@ struct PCB handle_process_arrival_pp(struct PCB ready_queue[QUEUEMAX], int *queu
             new_process.execution_starttime = timestamp;
             new_process.execution_endtime = timestamp + new_process.total_bursttime;
             new_process.remaining_bursttime = new_process.total_bursttime;
+            (*queue_cnt)++;
             
             return new_process;
         }
@@ -72,11 +73,23 @@ struct PCB handle_process_arrival_srtp(struct PCB ready_queue[QUEUEMAX], int *qu
 
         return new_process;
     } else {
-        if (current_process.remaining_bursttime > new_process.total_bursttime) {
-            ready_queue[*queue_cnt] = new_process;
+        if (current_process.remaining_bursttime < new_process.total_bursttime) {
             new_process.execution_starttime = 0;
             new_process.execution_endtime = 0;
             new_process.remaining_bursttime = new_process.total_bursttime;
+            ready_queue[*queue_cnt] = new_process;
+            (*queue_cnt)++;
+
+            return current_process;
+        } else {
+            new_process.execution_starttime = time_stamp;   
+            new_process.execution_endtime = time_stamp + new_process.total_bursttime;
+            new_process.remaining_bursttime = new_process.total_bursttime;
+            current_process.remaining_bursttime = current_process.total_bursttime - (time_stamp - current_process.execution_starttime);
+            current_process.execution_starttime = 0;
+            current_process.execution_endtime = 0;
+            ready_queue[*queue_cnt] = current_process;
+            (*queue_cnt)++;
             
             return new_process;
         }
@@ -163,8 +176,4 @@ struct PCB handle_process_completion_rr(struct PCB ready_queue[QUEUEMAX], int *q
 
         return next_process;
     }
-}
-
-int main() {
-    return 0; 
 }
